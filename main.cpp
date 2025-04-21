@@ -16,6 +16,77 @@ void buildReverseAccentMap(
 
 bool isEnglish = false;
 bool modeSwitchPressed = false;
+bool isWrong = false;
+
+bool getStartupStatus() {
+    ifstream file("config/run_on_startup.ini");
+    string line;
+    while (getline(file, line)) {
+        if (line.find("run_on_startup") != string::npos) {
+            return line.find("true") != string::npos;
+        }
+    }
+    return false;
+}
+
+void setStartupStatus(bool enable) {
+    ofstream file("config/run_on_startup.ini");
+    file << "run_on_startup = " << (enable ? "true" : "false") << endl;
+}
+
+namespace fs = std::filesystem;
+
+bool getStartupStatus(const string& path) {
+    ifstream infile(path);
+    if (!infile.is_open()) return false;
+
+    string line;
+    while (getline(infile, line)) {
+        if (line.find("X-GNOME-Autostart-enabled=") == 0) {
+            return line.find("true") != string::npos;
+        }
+    }
+    return false;
+}
+
+void setAutostartEnabled(bool enable) {
+    string path = string(getenv("HOME")) + "/.config/autostart/unikeyathome.desktop";
+    if (!fs::exists(path)) {
+        system(("cp unikeyathome.desktop " + path).c_str());
+    }
+
+    ifstream infile(path);
+    if (!infile.is_open()) {
+        cerr << "Cannot open autostart file for reading.\n";
+        return;
+    }
+
+    stringstream buffer;
+    string line;
+    bool found = false;
+    while (getline(infile, line)) {
+        if (line.find("X-GNOME-Autostart-enabled=") == 0) {
+            line = "X-GNOME-Autostart-enabled=" + string(enable ? "true" : "false");
+            found = true;
+        }
+        buffer << line << '\n';
+    }
+    infile.close();
+
+    if (!found) {
+        buffer << "X-GNOME-Autostart-enabled=" << (enable ? "true" : "false") << '\n';
+    }
+
+    ofstream outfile(path);
+    if (!outfile.is_open()) {
+        cerr << "Cannot open autostart file for writing.\n";
+        return;
+    }
+
+    outfile << buffer.str();
+    outfile.close();
+}
+
 
 int main() {
     // loadConfig("config.ini");
@@ -49,31 +120,42 @@ int main() {
     evmask.mask = mask;
     XISelectEvents(display, root, &evmask, 1);
 
-    cout << "Now running\n";
-    // buildReverseAccentMap(accentMap, reverseAccentMap);
-    // for (const auto& [composedChar, baseAndTone] : reverseAccentMap) {
-    //     const string& base = baseAndTone.first;
-    //     char tone = baseAndTone.second;
-    //     cout << "Composed: " << composedChar
-    //          << " => Base: " << base
-    //          << ", Tone: " << tone << endl;
-    // }
+    // cout << "Now running\n";
+    cout << "\033[0;36m<Welcome to UnikeyAtHome>\033[0m\n"
+    "\033[1;34m      \\\n"
+    "      /\\_/\\\n"
+    "     ( o.o )\n"
+    "      > ^ <\033[0m\n";
     
-    int cnt = 0;
     int fixBackspace = 0;
     
+    bool current = getStartupStatus(string(getenv("HOME")) + "/.config/autostart/unikeyathome.desktop");
+    cout << "[1]: Run on startup: " << (current ? "\033[0;31mtrue\033[0m" : "\033[0;31mfalse\033[0m") << endl;
+    char ch;
+    cin >> ch;
+
+    if (ch == '1') {
+        bool newStatus = !current;
+        setAutostartEnabled(newStatus);
+        cout << "Updated startup status: " << (newStatus ? "\033[0;31mtrue\033[0m" : "\033[0;31mfalse\033[0m") << endl;
+    }
     while (true) {
+        // bool current = getStartupStatus();
+
+        // cout << "Press 1 to toggle startup status..." << endl;
         XEvent ev; // Holds data for an event
         XNextEvent(display, &ev);
         if (ev.xcookie.type == GenericEvent && ev.xcookie.extension == opcode) { // Handle event
             XGetEventData(display, &ev.xcookie); // Get data
             if (ev.xcookie.evtype == XI_FocusIn) {
                 buffer.clear();
-                cout << "[FocusIn] Reset buffer\n";
+                isWrong = false; // Reset isWrong
+                // cout << "[FocusIn] Reset buffer\n";
             }
             if (ev.xcookie.evtype == XI_ButtonPress) {
                 buffer.clear();
-                cout << "[Button Press] Reset buffer\n";
+                isWrong = false; // Reset isWrong
+                // cout << "[Button Press] Reset buffer\n";
             }
             if (ev.xcookie.evtype == XI_KeyPress) { // Check if key press
                 XIDeviceEvent* xievent = (XIDeviceEvent*)ev.xcookie.data; // Get keycode
@@ -83,16 +165,16 @@ int main() {
                 }
                 char c = keycode_to_char(display, xievent->detail);
 
-                if (isascii(c) && isprint(c) && isEnglish == false) {
-                    cout << "Lan " << ++cnt << endl; 
-                    cout << "Ki tu: " << c << endl; 
+                if (isascii(c) && isprint(c) && isEnglish == false && isWrong == false) {
+                    // cout << "Lan " << ++cnt << endl; 
+                    // cout << "Ki tu: " << c << endl; 
 
-                    cout << "Buffer before: ";
-                    for (auto &&i : buffer)
-                    {
-                        cout << i;
-                    }
-                    cout << endl;
+                    // cout << "Buffer before: ";
+                    // for (auto &&i : buffer)
+                    // {
+                        // cout << i;
+                    // }
+                    // cout << endl;
                     bool foundBs = false;
 
                     if ((int)buffer.size() >= 1) {
@@ -109,27 +191,17 @@ int main() {
                         }
                     }  
                     if (foundBs == false) {
-                        // cout << "FOUND \n"; 
                         buffer.push_back(string(1, c)); // Append character to the buffer
                     }
 
-                    cout << "FIX " << fixBackspace << endl;
+                    // cout << "FIX " << fixBackspace << endl;
                     if (fixBackspace) {
                         for (int i = 0; i < fixBackspace + 1; i++) {
                             buffer.push_back("~");
                         }
-                        // system("xmodmap -e 'keycode 127 = Pause'");
-                        
                     }
-                    // sendEnd(display);
                     fixBackspace = 0;
 
-                    cout << "Buffer after: ";
-                    for (auto &&i : buffer)
-                    {
-                        cout << i;
-                    }
-                    cout << endl << endl;
                 }
                 else {
                     continue;

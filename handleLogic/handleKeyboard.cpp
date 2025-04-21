@@ -87,7 +87,7 @@ void clearWithCtrlA(Display* display) {
 }
 
 void send_char(Display *display, const string& utf8_char) {
-    // cout << "Ki tu" <<  utf8_char;
+    cout << "Ki tu" <<  utf8_char;
     FILE* pipe = popen("xclip -selection clipboard", "w");
     // FILE* pipe = popen("xclip -selection primary", "w");
 
@@ -113,7 +113,8 @@ void send_char(Display *display, const string& utf8_char) {
 }
 
 void handleCtrlBackspace(vector<string> &buffer) {
-    buffer.clear(); // Clear the entire buffer if no spaces are found
+    buffer.clear();
+    isWrong = false; // Clear the entire buffer if no spaces are found
 }
 
 void handleBackspace(vector<string>& buffer) {
@@ -128,8 +129,16 @@ bool handleModifiersAndControlKeys(XIDeviceEvent* xievent, Display* display, std
 
     // Space or Ctrl + Backspace → reset buffer
     if ((isCtrl && keysym == XK_BackSpace) || xievent->detail == XKeysymToKeycode(display, XK_space)) {
-        std::cout << "Space or Ctrl+Backspace\n";
+        // std::cout << "Space or Ctrl+Backspace\n";
         buffer.clear();
+        isWrong = false;
+        return true;
+    }
+
+    if (xievent->detail == XKeysymToKeycode(display, XK_KP_Enter)) {
+        // std::cout << "Enter\n";
+        buffer.clear();
+        isWrong = false;
         return true;
     }
 
@@ -138,38 +147,39 @@ bool handleModifiersAndControlKeys(XIDeviceEvent* xievent, Display* display, std
         (!isEnglish ? system("notify-send 'English'") : system("notify-send 'Vietnam'"));
         isEnglish = !isEnglish;
         buffer.clear();
+        isWrong = false;
         return true;
     }
 
     // Modifier keys – just skip them
     if (xievent->mods.effective & ControlMask) {
-        std::cout << "Ctrl\n";
+        // std::cout << "Ctrl\n";
         return true;
     }
 
     if (xievent->mods.effective & Mod1Mask) {
-        std::cout << "Alt\n";
+        // std::cout << "Alt\n";
         return true;
     }
 
     if (xievent->mods.effective & ShiftMask) {
-        std::cout << "Shift\n";
+        // std::cout << "Shift\n";
         return true;
     }
 
     if (xievent->mods.effective & Mod4Mask) {
-        std::cout << "Win\n";
+        // std::cout << "Win\n";
         return true;
     }
 
     if (xievent->mods.effective & LockMask) {
-        std::cout << "Caps Lock\n";
+        // std::cout << "Caps Lock\n";
         return true;
     }
 
     // Backspace
     if (xievent->detail == XKeysymToKeycode(display, XK_BackSpace)) {
-        std::cout << "Backspace\n";
+        // std::cout << "Backspace\n";
         handleBackspace(buffer);
         return true;
     }

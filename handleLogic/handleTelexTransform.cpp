@@ -6,7 +6,7 @@ bool isAccentKey(char c) {
 
 bool found = false;
 
-void handleReverseTelexTransform(vector<string> &buffer, char c) {
+void handleReverseTelexTransform(vector<string> &buffer, char c) { // aw -> aa
     if (buffer.empty()) return ;
 
     for (int i = buffer.size() - 1; i >= 0; i--) {
@@ -24,6 +24,29 @@ vector<string> handleTelexTransform(vector<string>& buffer, Display* display, ch
     string last = string(1, c);
     int count = 0;
     unordered_map<string, string>::iterator it;
+
+    auto checkIt = checkTelexExist.find(c); // Use a different variable for lookup
+    if (checkIt != checkTelexExist.end()) {
+        for (int i = 0; i < buffer.size(); i++) {
+            if (buffer[i] == checkIt->second) {
+                buffer.push_back(string(1, c));
+                buffer[i] = removeAccents(buffer[i]);
+                // cout << "Debug buffer: " << buffer[i];
+                isWrong = true;
+                for (int i = 0; i < (int)buffer.size(); i++) {
+                    sendBackspace(display);
+                }
+                string temp = "";
+                for (auto &&i : buffer)
+                {
+                    temp += i;
+                }
+
+                send_char(display, temp);
+                return buffer;
+            }
+        }
+    }
 
     handleReverseTelexTransform(buffer, c);
 

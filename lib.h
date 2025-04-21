@@ -26,8 +26,10 @@ extern unordered_map<string, unordered_map<char, string>> accentMap;
 extern unordered_map<string, pair<string, char>> reverseAccentMap;
 extern unordered_map<string, pair<string, char>> reverseTelexTransform;
 extern const vector<string> priority;
-// extern unordered_map<string, unordered_map<char, char>> reverseAccentMap; 
-// extern map<std::string, std::string> vietnameseKeysyms;
+extern unordered_map<string, vector<string>> checkToneExist;
+extern unordered_map<char, string> checkTelexExist;
+
+extern bool isWrong;
 
 char keycode_to_char(Display *display, unsigned int keycode);
 
@@ -45,6 +47,7 @@ void handleCtrlBackspace(string &buffer);
 void handleBackspace(vector<string>& buffer);
 
 void daemonize();
+string removeAccents(const std::string& input);
 
 bool isXJSRF(const char c);
 vector<string> handleXJSRF(vector<string> &buffer, Display *display, char c, bool &found);

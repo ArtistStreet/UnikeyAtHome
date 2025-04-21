@@ -58,6 +58,11 @@ string removeAccents(const std::string& input) {
     std::u32string result;
     for (size_t i = 0; i < norm_len; ++i) {
         if (!(norm[i] >= 0x300 && norm[i] <= 0x36F)) { // Unicode combining diacritical marks range
+            if (norm[i] == U'đ') result += U'd';
+            else if (norm[i] == U'ă') result += U'a';
+            else if (norm[i] == U'ư') result += U'u';
+            else if (norm[i] == U'ơ') result += U'o';
+            else
             result += norm[i];
         }
     }
@@ -76,46 +81,59 @@ vector<string> handleXJSRF(vector<string> &buffer, Display *display, char c, boo
     int countUTF = 0, index = 0;
     found = false;
 
-    // if (updateTone(buffer, c, accentMap, reverseAccentMap)) {
-    //     found = true;
-    //     for (int i = 0; i < (int)buffer.size() + 1; i++) {
-    //         sendBackspace(display);
-    //     }
-    //     cout << "Vao day dung k\n";
-    //     string temp = "";
-    //     // Combine buffer into a single string
-    //     for (auto &&i : buffer) {
-    //         temp += i;
-    //     }
-    //     send_char(display, temp);
-    //     return buffer;
-    // }
+    char temp = c;
+    string dau = string(1, temp);
+    auto x = checkToneExist.find(dau);
+    if (x != checkToneExist.end()) {
+        for (int i = buffer.size() - 1; i >= 0; i--) {
+            for (int j = 0; j < (int)x->second.size(); j++) {
+                if (buffer[i] == x->second[j]) {
+                    cout << "Debug x: " << x->second[j] << endl;
+                    buffer.push_back(string(1, c));
+                    buffer[i] = removeAccents(buffer[i]);
+                    cout << "Debug buffer: " << buffer[i];
+                    isWrong = true;
+                    for (int i = 0; i < (int)buffer.size(); i++) {
+                        sendBackspace(display);
+                    }
+                    string temp = "";
+                    for (auto &&i : buffer)
+                    {
+                        temp += i;
+                    }
+
+                    send_char(display, temp);
+                    return buffer;
+                }
+            }
+        }
+    }
 
     if (!updateTone(buffer, c, accentMap, reverseAccentMap)) {
         for (int i = 0; i < (int)buffer.size(); i++) { // If found utf8
             const string& s = buffer[i];
             
             if ((unsigned char)s[0] > 127) {
-                cout << "Vao day a\n";
+                // cout << "Vao day a\n";
                 found = true;
                 countUTF++;
                 index = i;
-                cout << "FOUND " << buffer[i];
+                // cout << "FOUND " << buffer[i];
                 continue;
             }
             for (int j = 0; j < (int)priority.size(); j++) {
                 if (buffer[i] == priority[j]){
                     found = true;
-                    cout << "FOUND " << buffer[i] << endl;
+                    // cout << "FOUND " << buffer[i] << endl;
                     continue;
                 }
             }
         }
     }
     if (found) {
-        cout << "Count " << countUTF << endl;
+        // cout << "Count " << countUTF << endl;
         if (countUTF == 0) {
-            cout << "ua\n";
+            // cout << "ua\n";
             if ((int)buffer.size() <= 2) {
                 for (int i = 0; i < 2; i++) {
                     if (applyAccentAtIndex(buffer, i, c, accentMap)) {
@@ -142,7 +160,8 @@ vector<string> handleXJSRF(vector<string> &buffer, Display *display, char c, boo
             }
         } 
         else if (countUTF > 0) {
-            auto it = accentMap.find(removeAccents(buffer[index]));
+            // auto it = accentMap.find(removeAccents(buffer[index]));
+            auto it = accentMap.find((buffer[index]));
             if (it != accentMap.end()) {
                 auto tranform = it->second.find(c);
                 if (tranform != it->second.end()) {
