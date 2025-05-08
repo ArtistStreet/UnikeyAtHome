@@ -87,7 +87,7 @@ void clearWithCtrlA(Display* display) {
 }
 
 void send_char(Display *display, const string& utf8_char) {
-    cout << "Ki tu" <<  utf8_char;
+    // cout << "Ki tu" <<  utf8_char;
     FILE* pipe = popen("xclip -selection clipboard", "w");
     // FILE* pipe = popen("xclip -selection primary", "w");
 
@@ -126,6 +126,7 @@ void handleBackspace(vector<string>& buffer) {
 bool handleModifiersAndControlKeys(XIDeviceEvent* xievent, Display* display, std::vector<std::string>& buffer, bool& isEnglish) {
     KeySym keysym = XkbKeycodeToKeysym(display, xievent->detail, 0, 0);
     bool isCtrl = xievent->mods.effective & ControlMask;
+    
 
     // Space or Ctrl + Backspace → reset buffer
     if ((isCtrl && keysym == XK_BackSpace) || xievent->detail == XKeysymToKeycode(display, XK_space)) {
@@ -135,21 +136,22 @@ bool handleModifiersAndControlKeys(XIDeviceEvent* xievent, Display* display, std
         return true;
     }
 
-    if (xievent->detail == XKeysymToKeycode(display, XK_KP_Enter)) {
-        // std::cout << "Enter\n";
+    if (xievent->detail == XKeysymToKeycode(display, XK_Return)) {
+        std::cout << "Enter\n";
+        fflush(stdout);
         buffer.clear();
         isWrong = false;
         return true;
     }
 
     // Toggle mode (commented out, optional)
-    if (isCtrl && xievent->detail == XKeysymToKeycode(display, XK_Shift_L)) {
-        (!isEnglish ? system("notify-send 'English'") : system("notify-send 'Vietnam'"));
-        isEnglish = !isEnglish;
-        buffer.clear();
-        isWrong = false;
-        return true;
-    }
+    // if (isCtrl && xievent->detail == XKeysymToKeycode(display, XK_Shift_L)) {
+    //     (!isEnglish ? system("notify-send 'English'") : system("notify-send 'Vietnam'"));
+    //     isEnglish = !isEnglish;
+    //     buffer.clear();
+    //     isWrong = false;
+    //     return true;
+    // }
 
     // Modifier keys – just skip them
     if (xievent->mods.effective & ControlMask) {

@@ -112,6 +112,7 @@ int main() {
     XIEventMask evmask; // Event type
     unsigned char mask[(XI_LASTEVENT + 7) / 8] = {0}; // Create byte array ceil(XI_Lastevent / 8)
     XISetMask(mask, XI_KeyPress); // Listen only for key press events
+    XISetMask(mask, XI_KeyRelease); // Listen only for key press events
     XISetMask(mask, XI_FocusIn);
     XISetMask(mask, XI_ButtonPress);
 
@@ -120,24 +121,31 @@ int main() {
     evmask.mask = mask;
     XISelectEvents(display, root, &evmask, 1);
 
-    cout << "\033[0;36m<Welcome to UnikeyAtHome>\033[0m\n"
-    "\033[1;34m      \\\n"
-    "      /\\_/\\\n"
-    "     ( o.o )\n"
-    "      > ^ <\033[0m\n";
+    // cout << "\033[0;36m<Welcome to UnikeyAtHome>\033[0m\n"
+    // "\033[1;34m      \\\n"
+    // "      /\\_/\\\n"
+    // "     ( o.o )\n"
+    // "      > ^ <\033[0m\n";
     
-    int fixBackspace = 0;
     
-    bool current = getStartupStatus(string(getenv("HOME")) + "/.config/autostart/unikeyathome.desktop");
-    cout << "[1]: Run on startup: " << (current ? "\033[0;31mtrue\033[0m" : "\033[0;31mfalse\033[0m") << endl;
-    char ch;
-    cin >> ch;
+    // bool current = getStartupStatus(string(getenv("HOME")) + "/.config/autostart/unikeyathome.desktop");
+    // cout << "[1]: Run on startup: " << (current ? "\033[0;31mtrue\033[0m" : "\033[0;31mfalse\033[0m") << endl;
+    // char ch;
+    // cin >> ch;
 
-    if (ch == '1') {
-        bool newStatus = !current;
-        setAutostartEnabled(newStatus);
-        cout << "Updated startup status: " << (newStatus ? "\033[0;31mtrue\033[0m" : "\033[0;31mfalse\033[0m") << endl;
-    }
+    // if (ch == '1') {
+    //     bool newStatus = !current;
+    //     setAutostartEnabled(newStatus);
+    //     cout << "Updated startup status: " << (newStatus ? "\033[0;31mtrue\033[0m" : "\033[0;31mfalse\033[0m") << endl;
+    // }
+    // else if (ch == 'q'){
+    //     exit(0);
+    // }
+    int fixBackspace = 0;
+
+    bool ctrlPressed = false;
+    bool shiftPressed = false;
+    bool awaitingToggle = false;
     while (true) {
         // bool current = getStartupStatus();
 
@@ -149,20 +157,41 @@ int main() {
             if (ev.xcookie.evtype == XI_FocusIn) {
                 buffer.clear();
                 isWrong = false; // Reset isWrong
-                // cout << "[FocusIn] Reset buffer\n";
             }
             if (ev.xcookie.evtype == XI_ButtonPress) {
                 buffer.clear();
                 isWrong = false; // Reset isWrong
-                // cout << "[Button Press] Reset buffer\n";
             }
             if (ev.xcookie.evtype == XI_KeyPress) { // Check if key press
+                // cout << "Nhan";
+                // fflush(stdout);
                 XIDeviceEvent* xievent = (XIDeviceEvent*)ev.xcookie.data; // Get keycode
 
+                KeySym keysym = XkbKeycodeToKeysym(display, xievent->detail, 0, 0);
+
+                if (keysym == XK_Control_L || keysym == XK_Control_R) {
+                    // countPress++;
+                    ctrlPressed = true;
+                }
+                if (keysym == XK_Shift_L || keysym == XK_Shift_R) {
+                    // countPress++;
+                    shiftPressed = true;
+                }
+    
+                // Nếu cả Ctrl và Shift đều đang được nhấn
+                if (ctrlPressed && shiftPressed) {
+                    awaitingToggle = true;
+                }
+                
+                char c = keycode_to_char(display, xievent->detail);
+
+                if (isascii(c) && isprint(c) && isEnglish == false && isWrong == false && awaitingToggle) {
+                    awaitingToggle = false;
+                }
+                    
                 if (handleModifiersAndControlKeys(xievent, display, buffer, isEnglish)) {
                     continue;
                 }
-                char c = keycode_to_char(display, xievent->detail);
 
                 if (isascii(c) && isprint(c) && isEnglish == false && isWrong == false) {
                     // cout << "Lan " << ++cnt << endl; 
@@ -206,6 +235,29 @@ int main() {
                     continue;
                 }
                 XFreeEventData(display, &ev.xcookie);
+            }
+            else if (ev.xcookie.evtype == XI_KeyRelease) {
+                // cout << 1 << endl;
+                // fflush(stdout);
+                XIDeviceEvent* xievent = (XIDeviceEvent*)ev.xcookie.data; // Get keycode
+
+                KeySym keysym = XkbKeycodeToKeysym(display, xievent->detail, 0, 0);
+                if (keysym == XK_Control_L || keysym == XK_Control_R) {
+                    ctrlPressed = false;
+                }
+                if (keysym == XK_Shift_L || keysym == XK_Shift_R) {
+                    shiftPressed = false;
+                }
+
+    
+                // Khi cả hai phím đã được thả ra sau khi từng nhấn đồng thời
+                if (!ctrlPressed && !shiftPressed && awaitingToggle) {
+                    isEnglish = !isEnglish;
+                    system(isEnglish ? "notify-send 'English'" : "notify-send 'Vietnamese'");
+                    buffer.clear();
+                    isWrong = false;
+                    awaitingToggle = false;
+                }
             }
         }
     }
