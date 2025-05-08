@@ -222,7 +222,6 @@ int main() {
                         buffer.push_back(string(1, c)); // Append character to the buffer
                     }
 
-                    // cout << "FIX " << fixBackspace << endl;
                     if (fixBackspace) {
                         for (int i = 0; i < fixBackspace + 1; i++) {
                             buffer.push_back("~");
